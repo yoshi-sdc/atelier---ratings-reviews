@@ -1,4 +1,4 @@
-\COPY reviews (id,product_id,rating,date,summary,body,recommend,reported,reviewer_name,reviewer_email,response,helpfulness) FROM 'reviews.csv' DELIMITER ',' CSV HEADER;
+\COPY reviews (id,product_id,rating,date,summary,body,recommend,reported,reviewer_name,reviewer_email,response,helpfulness) FROM '/Users/ryd/Desktop/untitled folder/hackReactor/sdc-Yoshi/atelier-RatingsReviews/csv/reviews.csv' DELIMITER ',' CSV HEADER;
 
 \COPY reviews_photos (id,review_id,url) FROM 'reviews_photos.csv' DELIMITER ',' CSV HEADER;
 
