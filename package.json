@@ -1,0 +1,30 @@
+{
+  "name": "atelier-ratingsreviews",
+  "version": "1.0.0",
+  "description": "sdc Ratings and Reviews section",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yoshi-sdc/atelier-RatingsReviews.git"
+  },
+  "keywords": [
+    "Ratings",
+    "and",
+    "reviews"
+  ],
+  "author": "Ryan De Leon",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/yoshi-sdc/atelier-RatingsReviews/issues"
+  },
+  "homepage": "https://github.com/yoshi-sdc/atelier-RatingsReviews#readme",
+  "dependencies": {
+    "dotenv": "^16.0.0",
+    "express": "^4.17.3",
+    "fast-csv": "^4.3.6",
+    "pg": "^8.7.3"
+  }
+}
