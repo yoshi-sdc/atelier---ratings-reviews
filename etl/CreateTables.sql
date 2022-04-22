@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS characteristics (
   id SERIAL PRIMARY Key,
   product_id int,
   name VARCHAR
-)
+);
 
 
 CREATE TABLE IF NOT EXISTS characteristic_reviews (
@@ -32,4 +32,4 @@ CREATE TABLE IF NOT EXISTS characteristic_reviews (
   characteristic_id INTEGER,
   review_id INTEGER references reviews(id),
   value INTEGER
-)
+);
