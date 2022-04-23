@@ -29,39 +29,56 @@ app.get('/reviews', (req, res, next) => {
   const queryInfo = `SELECT * FROM reviews WHERE product_id = ${product_id};`
 
   const queryTest3 = `SELECT reviews.*, photos.id, photos.url FROM reviews JOIN photos ON reviews.id = photos.review_id LIMIT 3;`
-  console.log(queryTest3, 'queryTest')
 
-  const information = {
-    'product': product_id,
-    'page': page,
-    'count': count,
-    'results': []
-}
+  // this works for getting the photos in array with id + url
+  const photoQuery = `SELECT id, array_agg(url) as url FROM photos WHERE photos.review_id = 5 GROUP BY id;`
+
+  const tests = `SELECT * FROM photos LIMIT 5;`
+
+
+  const newQuery = `SELECT reviews.*, (SELECT id, array_agg(url) as url FROM photos WHERE photos.review_id = 5 GROUP BY id) as photos FROM reviews INNER JOIN photos ON reviews.id = photos.review_id WHERE reviews.product_id = 2 GROUP BY reviews.id LIMIT 7;`
+
+  // const newQuery = `SELECT reviews.*
+  //   FROM reviews
+  //   JOIN (SELECT id, review_id, array_agg(url) as url
+  //   FROM photos WHERE photos.review_id = 5 GROUP BY id) as photos
+  //   ON reviews.id = photos.review_id
+  //   WHERE reviews.product_id = 2 GROUP BY reviews.id LIMIT 7;`
+
+    const reviewQuery = 'SELECT reviews.*, photos.id, array_agg(url) as photos FROM reviews JOIN photos ON reviews.id = photos.review_id WHERE product_id = 2 GROUP BY reviews.id, photos.id LIMIT 5;'
+
+//   const information = {
+//     'product': product_id,
+//     'page': page,
+//     'count': count,
+//     'results': []
+// }
 
   pool
-    .query(queryTest3)
-    .then(data => {
-      let dataArray = []
-      let results;
-      const testing = data.rows.map((item) => {
-        results = {
-        'review_id': item.id,
-        'rating': item.ratings,
-        'summary': item.summary,
-        'recommdend': item.recommend,
-        'response': item.response,
-        'body': item.body,
-        'date': item.date,
-        'reviewer_name': item.reviewer_name,
-        'helpfulness': item.helpfulness,
-        'photos': []
-        }
-      results.photos.push({'id': item.id, 'url': item.url})
-      console.log(results, 'this is results')
-      information.results.push(results)
-    })
-      res.send(information)
-    })
+    .query(newQuery)
+    .then(data => res.send(data.rows))
+    // .then(data => {
+    //   let dataArray = []
+    //   let results;
+    //   const testing = data.rows.map((item) => {
+    //     results = {
+    //     'review_id': item.id,
+    //     'rating': item.ratings,
+    //     'summary': item.summary,
+    //     'recommdend': item.recommend,
+    //     'response': item.response,
+    //     'body': item.body,
+    //     'date': item.date,
+    //     'reviewer_name': item.reviewer_name,
+    //     'helpfulness': item.helpfulness,
+    //     'photos': []
+    //     }
+    //   results.photos.push({'id': item.id, 'url': item.url})
+    //   console.log(results, 'this is results')
+    //   information.results.push(results)
+    // })
+    //   res.send(information)
+    // })
     .catch(err => console.log(err))
 })
 
@@ -150,3 +167,23 @@ app.listen(port, () => console.log(`listening at http://localhost:${port}`))
 // })
 // .catch(err => console.log(err))
 // })
+
+// const queryReview = 'SELECT reviews.id, reviews.rating, reviews.summary, reviews.recommend, reviews.response. reviews.body, reviews.date, reviews.reviewer_name, reviews.helpfulness,
+//  (SELECT ARRAY_TO_JSON(coalesce(ARRAY_AGG(photo), array[]::record[]))
+//  FROM '
+
+const test = `
+SELECT reviews.*,
+(
+  SELECT array_to_json(coalesce(array_agg(url)))
+  FROM
+  (
+    SELECT photos.id, photos.url
+    FROM reviews
+    INNER JOIN photos
+    ON reviews.id = photos.review_id
+    WHERE photos.review_id = reviews.id
+    ) url
+    ) as photos
+  FROM reviews
+  WHERE reviews.product_id = 2;`
