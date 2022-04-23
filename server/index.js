@@ -33,17 +33,20 @@ app.get('/reviews', (req, res, next) => {
   // this works for getting the photos in array with id + url
   const photoQuery = `SELECT id, array_agg(url) as url FROM photos WHERE photos.review_id = 5 GROUP BY id;`
 
-  const tests = `SELECT * FROM photos LIMIT 5;`
+  const tests = `SELECT r.*, (
+    SELECT
+  json_agg(json_build_object(
+  'id', p.id,
+  'url', p.url
+  ))
+  FROM photos p
+  WHERE p.review_id = 5) as photos_url
+   FROM reviews r
+  WHERE r.id = 5;`
 
 
   const newQuery = `SELECT reviews.*, (SELECT id, array_agg(url) as url FROM photos WHERE photos.review_id = 5 GROUP BY id) as photos FROM reviews INNER JOIN photos ON reviews.id = photos.review_id WHERE reviews.product_id = 2 GROUP BY reviews.id LIMIT 7;`
 
-  // const newQuery = `SELECT reviews.*
-  //   FROM reviews
-  //   JOIN (SELECT id, review_id, array_agg(url) as url
-  //   FROM photos WHERE photos.review_id = 5 GROUP BY id) as photos
-  //   ON reviews.id = photos.review_id
-  //   WHERE reviews.product_id = 2 GROUP BY reviews.id LIMIT 7;`
 
     const reviewQuery = 'SELECT reviews.*, photos.id, array_agg(url) as photos FROM reviews JOIN photos ON reviews.id = photos.review_id WHERE product_id = 2 GROUP BY reviews.id, photos.id LIMIT 5;'
 
@@ -55,7 +58,7 @@ app.get('/reviews', (req, res, next) => {
 // }
 
   pool
-    .query(newQuery)
+    .query(tests)
     .then(data => res.send(data.rows))
     // .then(data => {
     //   let dataArray = []
@@ -168,22 +171,4 @@ app.listen(port, () => console.log(`listening at http://localhost:${port}`))
 // .catch(err => console.log(err))
 // })
 
-// const queryReview = 'SELECT reviews.id, reviews.rating, reviews.summary, reviews.recommend, reviews.response. reviews.body, reviews.date, reviews.reviewer_name, reviews.helpfulness,
-//  (SELECT ARRAY_TO_JSON(coalesce(ARRAY_AGG(photo), array[]::record[]))
-//  FROM '
 
-const test = `
-SELECT reviews.*,
-(
-  SELECT array_to_json(coalesce(array_agg(url)))
-  FROM
-  (
-    SELECT photos.id, photos.url
-    FROM reviews
-    INNER JOIN photos
-    ON reviews.id = photos.review_id
-    WHERE photos.review_id = reviews.id
-    ) url
-    ) as photos
-  FROM reviews
-  WHERE reviews.product_id = 2;`
