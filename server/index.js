@@ -1,13 +1,11 @@
 // express
 require('dotenv').config();
 const express = require('express');
-const path = require('path');
 const port = process.env.PORT || 3001;
 const app = express();
 const Pool = require('pg').Pool;
 
 
-app.use(express.static(path.join(__dirname, '../client/dist')));
 app.use(express.json());
 
 
@@ -26,29 +24,22 @@ app.get('/reviews', (req, res, next) => {
   let product_id = req.body.product_id;
   let count = req.body.count || '5';
   let page = 0;
-  const queryInfo = `SELECT * FROM reviews WHERE product_id = ${product_id};`
 
-  const queryTest3 = `SELECT reviews.*, photos.id, photos.url FROM reviews JOIN photos ON reviews.id = photos.review_id LIMIT 3;`
 
   // this works for getting the photos in array with id + url
   const photoQuery = `SELECT id, array_agg(url) as url FROM photos WHERE photos.review_id = 5 GROUP BY id;`
 
-  const tests = `SELECT r.*, (
+  const reviewQuery = `SELECT r.id as review_id, r.rating, r.summary, r.recommend, r.response, r.body, r.date, r.reviewer_name, r.helpfulness, (
     SELECT
   json_agg(json_build_object(
   'id', p.id,
   'url', p.url
   ))
   FROM photos p
-  WHERE p.review_id = 5) as photos_url
+  WHERE p.review_id = r.id) as photos
    FROM reviews r
-  WHERE r.id = 5;`
+  WHERE r.product_id = 2;`
 
-
-  const newQuery = `SELECT reviews.*, (SELECT id, array_agg(url) as url FROM photos WHERE photos.review_id = 5 GROUP BY id) as photos FROM reviews INNER JOIN photos ON reviews.id = photos.review_id WHERE reviews.product_id = 2 GROUP BY reviews.id LIMIT 7;`
-
-
-    const reviewQuery = 'SELECT reviews.*, photos.id, array_agg(url) as photos FROM reviews JOIN photos ON reviews.id = photos.review_id WHERE product_id = 2 GROUP BY reviews.id, photos.id LIMIT 5;'
 
 //   const information = {
 //     'product': product_id,
@@ -58,30 +49,17 @@ app.get('/reviews', (req, res, next) => {
 // }
 
   pool
-    .query(tests)
-    .then(data => res.send(data.rows))
-    // .then(data => {
-    //   let dataArray = []
-    //   let results;
-    //   const testing = data.rows.map((item) => {
-    //     results = {
-    //     'review_id': item.id,
-    //     'rating': item.ratings,
-    //     'summary': item.summary,
-    //     'recommdend': item.recommend,
-    //     'response': item.response,
-    //     'body': item.body,
-    //     'date': item.date,
-    //     'reviewer_name': item.reviewer_name,
-    //     'helpfulness': item.helpfulness,
-    //     'photos': []
-    //     }
-    //   results.photos.push({'id': item.id, 'url': item.url})
-    //   console.log(results, 'this is results')
-    //   information.results.push(results)
-    // })
-    //   res.send(information)
-    // })
+    .query(reviewQuery)
+    .then(data => {
+      information = {
+        'product': product_id,
+        'page': page,
+        'count': count,
+        'results': data.rows
+      }
+      res.send(information)
+    })
+
     .catch(err => console.log(err))
 })
 
@@ -97,9 +75,67 @@ app.get('/reviews/meta', (req, res, next) => {
   const queryTest1 = `SELECT rating, recommend, photo FROM reviews JOIN photos WHERE product_id = ${product_id} && review.id = photos.id; `
   // query
 
+  const queryMeta = `SELECT json_object_agg(name, testing)  as characteristics
+  FROM
+  (SELECT c.name, json_build_object(
+    'id', cr.id,
+    'value', cr.value
+  ) as testing
+  FROM characteristics c
+  JOIN characteristic_reviews cr
+  ON c.id = cr.characteristic_id
+  WHERE cr.review_id = 1
+  LIMIT 5) as test;`
+
+  const ratingsQuery = `with table1 as(
+    SELECT r.rating,COUNT(*) as count
+    FROM reviews r
+    WHERE r.product_id = 2
+    GROUP BY r.rating)
+
+    SELECT json_object_agg(table1.rating, table1.count) as ratings
+    from table1;`
+
+  const TEST = `with table1 as (
+    SELECT table1.product_id, json_object_agg((CAST(table1.rating AS integer)), table1.count) as ratings
+    FROM (
+      SELECT r.product_id, r.rating,COUNT(*) as count
+      FROM reviews r
+      WHERE r.product_id = 2
+      GROUP BY r.product_id, r.rating) as table1
+    GROUP BY table1.product_id
+  ),
+  table2 as (
+    SELECT table2.product_id, json_object_agg(table2.recommend, table2.count) as recommend
+    FROM (
+      SELECT  r.product_id, r.recommend,COUNT(*) as count
+      FROM reviews r
+      WHERE r.product_id = 2
+      GROUP BY r.product_id, r.recommend) as table2
+    GROUP BY table2.product_id
+  ),
+  table3 as(
+    select c.product_id, json_object_agg(c.name, json_build_object(
+      'id', cr.id,
+      'value', cr.value
+    ) ) as characteristics
+    FROM characteristics c
+    JOIN characteristic_reviews cr
+    ON c.id = cr.characteristic_id
+    WHERE c.product_id = 2
+    GROUP BY c.product_id, cr.review_id
+    LIMIT 1)
+
+  SELECT table1.ratings, table2.recommend, table3.characteristics
+  FROM table1
+  JOIN table2
+  ON table1.product_id = table2.product_id
+  JOIN  table3 ON table1.product_id = table3.product_id;`
+
   pool
-    .query(queryTest1)
+    .query(TEST)
     .then(data => {
+      // console.log(JSON.parse(JSON.stringify(data.rows)))
       res.send(data.rows)
     })
     .catch(err => console.log(err));
@@ -148,27 +184,6 @@ app.put('/reviews/:review_id/report', (req, res, next) => {
 
 app.listen(port, () => console.log(`listening at http://localhost:${port}`))
 
-// reviews query set up
-// pool
-// .query(queryTest3)
-// .then(data => {
-//   console.log(data.rows, 'this is data')
-//   information.results = {
-//     'review_id': data.rows[0].review_id,
-//     'rating': data.rows[0].ratings,
-//     'summary': data.rows[0].summary,
-//     'recommdend': '',
-//     'response': '',
-//     'body': '',
-//     'data': '',
-//     'reviewer_name': '',
-//     'helpfulness': '',
-//     'photos': []
-//     }
-//   information.results.photos.push(data.rows[0].url)
-//   res.send(information)
-// })
-// .catch(err => console.log(err))
-// })
+
 
 
