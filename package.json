@@ -4,7 +4,7 @@
   "description": "sdc Ratings and Reviews section",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jest",
     "start:dev": "nodemon --watch server server/index.js"
   },
   "repository": {
@@ -26,7 +26,11 @@
     "dotenv": "^16.0.0",
     "express": "^4.17.3",
     "fast-csv": "^4.3.6",
+    "jest": "^28.0.0",
     "nodemon": "^2.0.15",
     "pg": "^8.7.3"
+  },
+  "devDependencies": {
+    "supertest": "^6.2.2"
   }
 }

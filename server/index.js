@@ -3,27 +3,21 @@ require('dotenv').config();
 const express = require('express');
 const port = process.env.PORT || 3001;
 const app = express();
-const Pool = require('pg').Pool;
+const pool = require('./database.js')
 
 
 app.use(express.json());
 
 
-
-const pool = new Pool({
-  host: 'localhost',
-  user: 'ryd',
-  database: 'reviews',
-  password: '',
-  port: 5432
-});
-
-
 app.get('/reviews', (req, res, next) => {
-  console.log(req.body, 'this is body')
-  let product_id = req.body.product_id;
+  console.log(req.body)
+  let product_id = req.body.product_id || 2;
   let count = req.body.count || '5';
-  let page = 0;
+  let page = 1;
+  let sort = req.body.sort || 'newest';
+  if (sort === 'newest') sort = 'ORDER BY r.date desc';
+  if (sort === 'helpful') sort = 'ORDER BY r.helpfulness desc';
+  if (sort === 'relevant') sort = 'ORDER BY r.helpfulness, r.date desc';
 
 
   // this works for getting the photos in array with id + url
@@ -38,18 +32,21 @@ app.get('/reviews', (req, res, next) => {
   FROM photos p
   WHERE p.review_id = r.id) as photos
    FROM reviews r
-  WHERE r.product_id = ${product_id}
-  LIMIT ${count};`
+  WHERE r.product_id = ${product_id} AND r.reported = false
+  ${sort}
+  LIMIT ${count}
+  OFFSET ${count * page - count};`
 
   pool
     .query(reviewQuery)
     .then(data => {
-      information = {
-        'product': product_id,
+     let information = {
+        'product': req.body.product_id,
         'page': page,
         'count': count,
         'results': data.rows
       }
+      console.log(information.product, 'should equal 5')
       res.send(information)
     })
 
@@ -57,6 +54,7 @@ app.get('/reviews', (req, res, next) => {
 })
 
 app.get('/reviews/meta', (req, res, next) => {
+  console.log(req.body)
   // product_id
   let product_id = req.body.product_id;
   // LIMIT ${count}*
@@ -120,17 +118,12 @@ app.post('/reviews', (req, res, next) => {
   let recommend = req.query.recommend
   let name = req.query.name;
   let email = req.query.email;
-  // let timestamp = SELECT LOCALTIMESTAMP(0);
-
-
-  console.log(req.query, 'this is reqbody')
-  // INSERT IN TO TABLE
 
   const insertToTable = `
     INSERT INTO reviews
     (product_id, rating, date, summary, body, recommend, reviewer_name, reviewer_email, reported, helpfulness)
     VALUES
-    (${product_id}, ${rating}, EXTRACT(EPOCH from CURRENT_TIMESTAMP)::bigint * 1000, '${summary}', '${body}', ${recommend}, '${name}', '${email}', false, 0)
+    (${product_id}, ${rating}, SELECT LOCALTIMESTAMP(0), '${summary}', '${body}', ${recommend}, '${name}', '${email}', false, 0)
     RETURNING rating;`;
 
 
@@ -146,25 +139,23 @@ app.post('/reviews', (req, res, next) => {
 
 app.put('/reviews/:review_id/helpful', (req, res, next) => {
 
-  console.log(req, 'this is query')
+  // console.log(req, 'this is query')
   let review_id = req.params.review_id;
 
   const updateHelp = `UPDATE reviews
   SET helpfulness = helpfulness::int + 1
-  WHERE reviews.id = ${review_id}
-  RETURNING id;`
+  WHERE reviews.id = ${review_id};`
 
   pool
     .query(updateHelp)
     .then(data => {
       console.log('helpful')
-      res.send(data.rows)
+      res.send('helpful')
     })
     .catch(err => console.log(err));
 })
 
 app.put('/reviews/:review_id/report', (req, res, next) => {
-  console.log(req, 'this is params')
   let review_id = req.params.review_id
   const report = `UPDATE reviews
   SET reported = True
@@ -174,14 +165,29 @@ app.put('/reviews/:review_id/report', (req, res, next) => {
   pool
     .query(report)
     .then(data => {
-      console.log('successfully posted')
+      console.log('successfully reported')
       res.send('successfully reported!')
     })
     .catch(err => console.log(err));
 })
 
+app.post('/reviews', (req, res, next) => {
+  let characteristics = req.params.characteristics;
+  let review_id = req.params.review_id;
+
+  const postCharacteristics = `
+    INSERT INTO characteristics_reviews (review_id, characteristics_id, value) VALUES ()
+  ;`
+
+  pool
+    .query(postCharacteristics)
+    .then(() => res.send('characteristics posted'))
+})
+
 
 app.listen(port, () => console.log(`listening at http://localhost:${port}`))
+
+module.exports.app = app;
 
 
 
