@@ -110,32 +110,36 @@ app.get('/reviews/meta', (req, res, next) => {
     .catch(err => console.log(err));
 })
 
-app.post('/reviews', (req, res, next) => {
-  let product_id = req.query.product_id;
-  let rating = req.query.rating;
-  let summary = req.query.summary;
-  let body = req.query.body;
-  let recommend = req.query.recommend
-  let name = req.query.name;
-  let email = req.query.email;
-
-  const insertToTable = `
-    INSERT INTO reviews
-    (product_id, rating, date, summary, body, recommend, reviewer_name, reviewer_email, reported, helpfulness)
-    VALUES
-    (${product_id}, ${rating}, SELECT LOCALTIMESTAMP(0), '${summary}', '${body}', ${recommend}, '${name}', '${email}', false, 0)
-    RETURNING rating;`;
+// app.post('/reviews', (req, res, next) => {
+//   let product_id = req.query.product_id;
+//   let rating = req.query.rating;
+//   let summary = req.query.summary;
+//   let body = req.query.body;
+//   let recommend = req.query.recommend
+//   let name = req.query.name;
+//   let email = req.query.email;
 
 
 
-  pool
-    .query(insertToTable)
-    .then(data => {
-      console.log(data)
-      res.send('sucessfully posted')
-    })
-    .catch(err => console.log(err));
-})
+//   console.log(req.query, 'this body')
+
+//   const insertToTable = `
+//     INSERT INTO reviews
+//     (product_id, rating, date, summary, body, recommend, reviewer_name, reviewer_email, reported, helpfulness)
+//     VALUES
+//     (${product_id}, ${rating}, cast(to_char((current_timestamp)::TIMESTAMP,'yyyymmddhhmiss') as BigInt), '${summary}', '${body}', ${recommend}, '${name}', '${email}', false, 0)
+//     RETURNING rating;`;
+
+
+
+//   pool
+//     .query(insertToTable)
+//     .then(data => {
+//       console.log(data)
+//       res.send('sucessfully posted')
+//     })
+//     .catch(err => console.log(err));
+// })
 
 app.put('/reviews/:review_id/helpful', (req, res, next) => {
 
@@ -171,24 +175,100 @@ app.put('/reviews/:review_id/report', (req, res, next) => {
     .catch(err => console.log(err));
 })
 
+// app.post('/reviews', (req, res, next) => {
+//   let characteristics = req.params.characteristics;
+//   let review_id = req.params.review_id;
+
+//   const postCharacteristics = `
+//     INSERT INTO characteristics_reviews (review_id, characteristics_id, value) VALUES ()
+//   ;`
+
+//   pool
+//     .query(postCharacteristics)
+//     .then(() => res.send('characteristics posted'))
+// })
+
+// app.post('/reviews', (req, res, next) => {
+//   let url = req.body.photos;
+//   let review_id = req.params.review_id;
+//   console.log(req.body, 'this is photos')
+
+//   // const addPhotos = `
+//   //   INSERT INTO photos (review_id, photos) SELECT url, review_id FROM UNNEST (${url}, ${review_id})
+//   // ;`
+
+//   pool
+//     .query(addPhotos)
+//     .then(() => res.send('photos posted'))
+// })
+
+
+
+
+//__________________________________________
 app.post('/reviews', (req, res, next) => {
-  let characteristics = req.params.characteristics;
-  let review_id = req.params.review_id;
+  let product_id = req.query.product_id;
+  let rating = req.query.rating;
+  let summary = req.query.summary;
+  let body = req.query.body;
+  let recommend = req.query.recommend
+  let name = req.query.name;
+  let email = req.query.email;
 
-  const postCharacteristics = `
-    INSERT INTO characteristics_reviews (review_id, characteristics_id, value) VALUES ()
-  ;`
+  let photos  = JSON.parse(req.query.photos);
+  let characteristics = JSON.parse(req.query.characteristics);
 
-  pool
-    .query(postCharacteristics)
-    .then(() => res.send('characteristics posted'))
+  let ipad = (Object.values(characteristics))
+  let nameValues = (Object.keys(characteristics))
+
+  let idArray = ipad.map(item => item.id)
+  let valueArray = ipad.map(item => item.value)
+  // let valuesArray = charValues.map(item => item.value)
+
+  console.log(nameValues, 'this is name array')
+  console.log(idArray, 'this is keys')
+  console.log(valueArray, 'this is values array')
+
+  const addChars = `
+    INSERT INTO characteristics (product_id, name)
+    SELECT product_id, name FROM UNNEST ($1::int[], $2::text[]) as t (product_id, name)
+      ;
+  `;
+
+  const addPhotos = ` INSERT INTO photos (url, review_id)
+  SELECT url, review_id FROM UNNEST ($1::text[], $2::int[]) AS t (url, review_id)
+  RETURNING review_id`;
+
+  const addCharacteristics = `
+   INSERT INTO characteristic_reviews (review_id, characteristic_id, value)
+  SELECT review_id, characteristic_id, value FROM UNNEST ($1::int[], $2::int[], $3::decimal[]) AS t (review_id, characteristic_id, value)
+  `;
+
+  const insertToTable = `
+    INSERT INTO reviews
+    (product_id, rating, date, summary, body, recommend, reviewer_name, reviewer_email, reported, helpfulness)
+    VALUES
+    (${product_id}, ${rating}, cast(to_char((current_timestamp)::TIMESTAMP,'yyyymmddhhmiss') as BigInt), '${summary}', '${body}', ${recommend}, '${name}', '${email}', false, 0)
+    RETURNING id`;
+
+    pool
+    .query(insertToTable)
+    .then(data => {
+      var review_id = data.rows[0]['id']
+      // console.log(data.rows[0]['id'])
+      pool.query(addPhotos, [photos, Array(photos.length).fill(review_id)])
+      return review_id
+    })
+    .then(review_id => {
+      pool
+        .query(addCharacteristics, [Array(idArray.length).fill(review_id), idArray, valueArray])
+        res.send('sucessfully posted')
+    })
+    .catch(err => res.send(err))
+
 })
-
 
 app.listen(port, () => console.log(`listening at http://localhost:${port}`))
 
 module.exports.app = app;
-
-
-
 

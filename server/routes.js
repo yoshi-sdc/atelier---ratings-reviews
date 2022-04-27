@@ -1,6 +1,6 @@
 const router = require('express').Router();
 
-router.GET((req, res, next) => {
+router.get((req, res) => {
   console.log(req.body)
   let product_id = req.body.product_id || 2;
   let count = req.body.count || '5';
