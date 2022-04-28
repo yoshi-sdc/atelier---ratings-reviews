@@ -95,7 +95,7 @@ module.exports = {
     pool
       .query(updateHelp)
       .then(() => {
-        res.status(201)send('CREATED')
+        res.status(201).send('CREATED')
       })
       .catch(err => res.status(400).send(err));
   },
