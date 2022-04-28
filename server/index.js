@@ -7,7 +7,7 @@ const helper = require('./queryfunctions.js')
 
 
 app.use(express.json());
-app.get('/', (req, res) => res.send('connected to server'))
+app.get('/loaderio-b2b749312af5adf23926ed96983bfdaa.txt', (req, res) => res.send('loaderio-b2b749312af5adf23926ed96983bfdaa'))
 app.get('/reviews', helper.getAllReviews)
 app.get('/reviews/meta', helper.getReviewMeta)
 app.post('/reviews', helper.postReview)
