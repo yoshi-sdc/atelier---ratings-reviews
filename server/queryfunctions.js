@@ -2,11 +2,10 @@ const pool = require('./database.js')
 
 module.exports = {
   getAllReviews: (req, res) => {
-
-      let product_id = req.body.product_id;
-      let count = req.body.count || 5; // default is 5
+      let product_id = req.query.product_id;
+      let count = req.query.count || 5; // default is 5
       let page = 1;
-      let sort = req.body.sort;
+      let sort = req.query.sort || 'newest'; //default newest
         if (sort === 'newest') sort = 'ORDER BY r.date desc';
         if (sort === 'helpful') sort = 'ORDER BY r.helpfulness desc';
         if (sort === 'relevant') sort = 'ORDER BY r.helpfulness, r.date desc';
@@ -29,7 +28,7 @@ module.exports = {
         .query(reviewQuery)
         .then(data => {
          let information = {
-            'product': req.body.product_id,
+            'product': product_id,
             'page': page,
             'count': count,
             'results': data.rows
@@ -40,7 +39,7 @@ module.exports = {
       },
 
   getReviewMeta: (req, res) => {
-    let product_id = req.body.product_id;
+    let product_id = req.query.product_id;
 
     const reviewsMetaQuery = `with table1 as (
       SELECT table1.product_id, json_object_agg((CAST(table1.rating AS integer)), table1.count) as ratings
@@ -83,7 +82,7 @@ module.exports = {
       .then(data => {
         res.status(200).send(data.rows[0])
       })
-      .catch(err => res.send(404));
+      .catch(err => res.status(400).send(err));
     },
 
   addHelpful: (req, res) => {
@@ -95,11 +94,10 @@ module.exports = {
 
     pool
       .query(updateHelp)
-      .then(data => {
-        console.log('helpful')
-        res.send('helpful')
+      .then(() => {
+        res.send('helpful added to count')
       })
-      .catch(err => res.status(404).send(err));
+      .catch(err => res.status(400).send(err));
   },
 
   reportReview: (req, res) => {
@@ -111,30 +109,31 @@ module.exports = {
 
     pool
       .query(report)
-      .then(data => {
-        console.log('successfully reported')
+      .then(() => {
         res.send('successfully reported!')
       })
       .catch(err => res.status(400).send(err));
   },
 
   postReview: (req, res) => {
-    let product_id = req.query.product_id;
-    let rating = req.query.rating;
-    let summary = req.query.summary;
-    let body = req.query.body;
-    let recommend = req.query.recommend
-    let name = req.query.name;
-    let email = req.query.email;
-    console.log(summary, 'this should be a summary')
-    let photos  = JSON.parse(req.query.photos);
-    let characteristics = JSON.parse(req.query.characteristics);
+    let product_id = req.body.product_id;
+    let rating = req.body.rating;
+    let summary = req.body.summary;
+    let body = req.body.body;
+    let recommend = req.body.recommend
+    let name = req.body.name;
+    let email = req.body.email;
 
-    let ipad = (Object.values(characteristics))
+
+    let photos  = req.body.photos;
+    let characteristics = req.body.characteristics;
+
+    let innerObj = (Object.values(characteristics))
     let nameValues = (Object.keys(characteristics))
 
-    let idArray = ipad.map(item => item.id)
-    let valueArray = ipad.map(item => item.value)
+    let idArray = innerObj.map(item => item.id)
+    let valueArray = innerObj.map(item => item.value)
+
 
     const addChars = `
       INSERT INTO characteristics (product_id, name)
@@ -163,7 +162,7 @@ module.exports = {
       .then(data => {
         var review_id = data.rows[0]['id']
         pool.query(addPhotos, [photos, Array(photos.length).fill(review_id)])
-        return review_id
+        return review_id;
       })
       .then(review_id => {
         pool
