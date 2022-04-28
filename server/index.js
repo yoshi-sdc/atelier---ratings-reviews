@@ -7,7 +7,7 @@ const helper = require('./queryfunctions.js')
 
 
 app.use(express.json());
-
+app.get('/', () => res.send('connected to server'))
 app.get('/reviews', helper.getAllReviews)
 app.get('/reviews/meta', helper.getReviewMeta)
 app.post('/reviews', helper.postReview)
