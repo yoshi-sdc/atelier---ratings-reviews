@@ -95,7 +95,7 @@ module.exports = {
     pool
       .query(updateHelp)
       .then(() => {
-        res.send('helpful added to count')
+        res.status(201)send('CREATED')
       })
       .catch(err => res.status(400).send(err));
   },
@@ -110,7 +110,7 @@ module.exports = {
     pool
       .query(report)
       .then(() => {
-        res.send('successfully reported!')
+        res.status(204).send('NO CONTENT')
       })
       .catch(err => res.status(400).send(err));
   },
@@ -167,7 +167,7 @@ module.exports = {
       .then(review_id => {
         pool
           .query(addCharacteristics, [Array(idArray.length).fill(review_id), idArray, valueArray])
-          res.send('sucessfully posted')
+          res.status(201).send('CREATED')
       })
       .catch(err => res.status(400).send(err))
     }
